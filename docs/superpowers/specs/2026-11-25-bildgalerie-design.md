@@ -42,6 +42,7 @@ Diese Ergebnisse gelten als Fehlschlag, auch wenn die Seite technisch läuft:
 - Jeder Build verarbeitet alle Fotos neu, obwohl sich nichts geändert hat
 - Abhängigkeit von einem externen Bilddienst oder CDN
 - Ein Foto ist nur über eine Mausgeste erreichbar
+- Standortkoordinaten im ausgelieferten HTML oder in ausgelieferten Bilddateien
 
 ## Randbedingungen
 
@@ -150,8 +151,22 @@ Alternativtext aus EXIF-Daten oder Bildinhalten geraten.
 Felder, in fester Reihenfolge: Datum (deutsches Format), Kamera
 (Hersteller + Modell), Objektiv, Blende, Belichtungszeit, ISO, Brennweite.
 Fehlt alles, entfällt der Block vollständig — kein leerer Rahmen, keine
-„unbekannt"-Zeilen. GPS-Daten werden nie ausgelesen und nie ausgegeben; die
-neu erzeugten Varianten enthalten durch `sharp` ohnehin keine Metadaten.
+„unbekannt"-Zeilen.
+
+**Standortdaten (GPS).** Koordinaten werden mitgelesen und in den
+Build-Daten unter `foto.gps` (`lat`, `lon`) abgelegt, damit sie später für
+Karte oder Sortierung nach Ort bereitstehen. Angezeigt werden sie in
+Version 1 nicht. Absicherung, damit sie nicht versehentlich öffentlich werden:
+
+- Kein Template liest `foto.gps`; Templates bekommen ausschließlich die
+  Anzeige-Felder aus `foto.exif` (Datum, Kamera, Objektiv, Blende,
+  Belichtungszeit, ISO, Brennweite)
+- Alle Varianten werden von `sharp` neu kodiert und tragen dadurch keine
+  EXIF-Daten — für AVIF, WebP und JPEG
+- Originaldateien werden nicht nach `_site` kopiert, es existiert also keine
+  ausgelieferte Datei mit eingebetteten Koordinaten
+- Der Build prüft `src/**/*.njk` auf `gps` und bricht mit Fehler ab, falls ein
+  Template es referenziert
 
 **Bildvarianten.** Pro Foto ein Satz Varianten über `@11ty/eleventy-img`:
 Breiten 400, 800, 1200, 1600 px, Formate AVIF, WebP, JPEG, Ausgabe nach
@@ -213,11 +228,22 @@ Cache `.cache/eleventy-img` und werden nur kopiert, nicht neu gerechnet.
 - Leeres Album: keine Seite, nicht in der Übersicht
 - Kein JavaScript in Version 1; die Fotoseite ist der Ersatz für eine Lightbox
 - `_site` wird vor jedem Build geleert, Cache bleibt erhalten
+- GPS wird gelesen und in den Build-Daten gehalten, aber nie ausgegeben
+- `robots.txt` plus `noindex`-Meta auf jeder Seite
 
 ## Offene Punkte, die nicht der Builder entscheidet
 
-- Für wen die Galerie öffentlich ist und ob sie von Suchmaschinen gefunden werden soll (beeinflusst `robots.txt`/`noindex`, nicht den Aufbau)
-- Wo sie gehostet wird
+- Zugangsdaten und Zielpfad für den Webspace (nicht im Repo ablegen)
+- Ob die Galerie zusätzlich vor fremden Blicken geschützt werden soll —
+  `noindex` hält Suchmaschinen fern, nicht Besucher mit der URL
+
+## Auslieferung
+
+Ausgeliefert wird der Inhalt von `_site` auf eigenem Webspace (statisches
+Hosting, Upload per FTP/SFTP oder rsync). Die Galerie soll nicht indexiert
+werden: eine `robots.txt` mit `User-agent: *` / `Disallow: /` wird nach
+`_site` kopiert, zusätzlich steht
+`<meta name="robots" content="noindex, nofollow">` im `<head>` jeder Seite.
 
 ## Dem Builder überlassen
 
@@ -225,4 +251,4 @@ Cache `.cache/eleventy-img` und werden nur kopiert, nicht neu gerechnet.
 - Genaue Gestaltung: Abstände, Farben, Typografie, Hover-Zustände
 - Ob eine Lightbox später als progressive Erweiterung ergänzt wird (eigene Entscheidung, nicht Teil dieses Designs)
 - Ob die Albenübersicht nach Datum statt alphabetisch sortiert
-- Ob `_site` zusätzlich per `robots.txt`/`sitemap` ergänzt wird
+- Ob zusätzlich eine `sitemap.xml` erzeugt wird (bei `noindex` wenig sinnvoll — meine Empfehlung: nein)
