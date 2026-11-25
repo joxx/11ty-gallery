@@ -3,3 +3,19 @@ layout: base.njk
 title: Alben
 ---
 <h1>Alben</h1>
+{% if not albums.length %}
+<p>Noch keine Alben — lege einen Ordner mit Fotos unter <code>src/photos/</code> an.</p>
+{% else %}
+<ul class="alben">
+  {% for album in albums %}
+  <li class="alben-eintrag">
+    <a href="{{ album.href }}">
+      {{ buildPicture(album.cover.image, { sizes: "(min-width: 40rem) 20rem, 90vw", alt: album.cover.alt, loading: "lazy" }) | safe }}
+      <span class="alben-titel">{{ album.title }}</span>
+      <span class="alben-anzahl">{{ album.count }} Fotos</span>
+    </a>
+    {% if album.description %}<p class="alben-beschreibung">{{ album.description }}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

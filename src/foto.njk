@@ -1,0 +1,21 @@
+---
+layout: base.njk
+pagination:
+  data: fotos
+  size: 1
+  alias: foto
+permalink: "{{ foto.href }}"
+---
+<article class="foto">
+  <h1>{{ foto.caption or foto.alt }}</h1>
+  <figure class="foto-bild">
+    {{ buildPicture(foto.image, { sizes: "(min-width: 64rem) 60rem, 92vw", alt: foto.alt, loading: "eager" }) | safe }}
+    {% if foto.caption %}<figcaption>{{ foto.caption }}</figcaption>{% endif %}
+  </figure>
+  {% if foto.exif | length %}{% include "exif.njk" %}{% endif %}
+  <p class="zurueck"><a href="/alben/{{ foto.albumSlug }}/">Zurück zum Album</a></p>
+  <nav class="nachbarn" aria-label="Weitere Fotos">
+    {% if foto.prevHref %}<a href="{{ foto.prevHref }}" rel="prev">{{ foto.prevLabel }}</a>{% endif %}
+    {% if foto.nextHref %}<a href="{{ foto.nextHref }}" rel="next">{{ foto.nextLabel }}</a>{% endif %}
+  </nav>
+</article>

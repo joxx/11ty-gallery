@@ -1,0 +1,12 @@
+<ul class="raster">
+  {% for foto in album.photos %}
+  <li>
+    <figure>
+      <a href="{{ foto.href }}">
+        {{ buildPicture(foto.image, { sizes: "(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw", alt: foto.alt, loading: "eager" if loop.first else "lazy", fetchPriority: "high" if loop.first else "auto" }) | safe }}
+      </a>
+      {% if foto.caption %}<figcaption>{{ foto.caption }}</figcaption>{% endif %}
+    </figure>
+  </li>
+  {% endfor %}
+</ul>

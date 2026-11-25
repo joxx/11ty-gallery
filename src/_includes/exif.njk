@@ -1,0 +1,9 @@
+<dl class="exif">
+  {% if foto.exif.date %}<dt>Aufgenommen</dt><dd>{{ foto.exif.date }}</dd>{% endif %}
+  {% if foto.exif.camera %}<dt>Kamera</dt><dd>{{ foto.exif.camera }}</dd>{% endif %}
+  {% if foto.exif.lens %}<dt>Objektiv</dt><dd>{{ foto.exif.lens }}</dd>{% endif %}
+  {% if foto.exif.aperture %}<dt>Blende</dt><dd>{{ foto.exif.aperture }}</dd>{% endif %}
+  {% if foto.exif.shutter %}<dt>Belichtungszeit</dt><dd>{{ foto.exif.shutter }}</dd>{% endif %}
+  {% if foto.exif.iso %}<dt>ISO</dt><dd>{{ foto.exif.iso }}</dd>{% endif %}
+  {% if foto.exif.focalLength %}<dt>Brennweite</dt><dd>{{ foto.exif.focalLength }}</dd>{% endif %}
+</dl>
