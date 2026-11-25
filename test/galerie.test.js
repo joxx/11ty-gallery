@@ -24,3 +24,38 @@ test("Alternativtext bei Kamera-Vorgaben nennt Position und Album", () => {
   }
   assert.equal(altTextFromFilename("IMG 1234.JPG", 1, 2, "Test"), "Foto 1 von 2 im Album Test");
 });
+
+import { displayExif, pluckGps } from "../src/_lib/galerie.js";
+
+const roh = {
+  DateTimeOriginal: new Date("2024-05-01T10:00:00Z"),
+  Make: "TestCam", Model: "X1",
+  LensModel: "18-55mm",
+  FNumber: 2.8, ExposureTime: 1 / 250, ISO: 400, FocalLength: 35,
+  latitude: 52.52, longitude: 13.405,
+};
+
+test("EXIF-Anzeige enthält nur die Whitelist-Felder", () => {
+  const e = displayExif(roh);
+  assert.deepEqual(Object.keys(e).sort(),
+    ["aperture", "camera", "date", "focalLength", "iso", "lens", "shutter"]);
+  assert.equal(e.camera, "TestCam X1");
+  assert.equal(e.aperture, "f/2.8");
+  assert.equal(e.shutter, "1/250 s");
+  assert.equal(e.iso, 400);
+  assert.equal(e.focalLength, "35 mm");
+  assert.match(e.date, /2024/);
+  assert.equal("latitude" in e, false);
+  assert.equal("gps" in e, false);
+});
+
+test("EXIF-Anzeige ohne Daten ist leer, nicht undefined", () => {
+  assert.deepEqual(displayExif(null), {});
+  assert.deepEqual(displayExif({ Make: "TestCam" }), { camera: "TestCam" });
+});
+
+test("GPS wird getrennt ausgelesen", () => {
+  assert.deepEqual(pluckGps(roh), { lat: 52.52, lon: 13.405 });
+  assert.equal(pluckGps(null), null);
+  assert.equal(pluckGps({ Make: "TestCam" }), null);
+});

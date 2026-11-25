@@ -1,3 +1,5 @@
+import exifr from "exifr";
+
 export const IMG_URL_PATH = "/img/";
 
 const KAMERA_NAMENSMUSTER = /^(img|dsc|dscn|pxl|dji|gopr|mvimg|screenshot)[-_ ]?\d+$/i;
@@ -21,6 +23,71 @@ export function albumTitleFromSlug(slug) {
 
 export function photoSlugFromFilename(filename) {
   return ohneEndung(filename);
+}
+
+function zahl(wert) {
+  const n = typeof wert === "number" ? wert : parseFloat(String(wert));
+  return Number.isFinite(n) ? n : null;
+}
+
+function datum(wert) {
+  if (!wert) return null;
+  const d = wert instanceof Date ? wert : new Date(wert);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("de-DE", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function kamera(make, model) {
+  const teile = [make, model].filter(Boolean).map((t) => String(t).trim());
+  return [...new Set(teile)].join(" ") || null;
+}
+
+function blende(wert) {
+  const n = zahl(wert);
+  return n === null ? null : `f/${Math.round(n * 10) / 10}`;
+}
+
+function belichtungszeit(wert) {
+  const n = zahl(wert);
+  if (n === null || n <= 0) return null;
+  if (n < 1) return `1/${Math.round(1 / n)} s`;
+  return `${Math.round(n * 10) / 10} s`;
+}
+
+function brennweite(wert) {
+  const n = zahl(wert);
+  return n === null ? null : `${Math.round(n)} mm`;
+}
+
+export function displayExif(raw) {
+  if (!raw) return {};
+  const felder = {
+    date: datum(raw.DateTimeOriginal ?? raw.CreateDate),
+    camera: kamera(raw.Make, raw.Model),
+    lens: raw.LensModel ? String(raw.LensModel).trim() : null,
+    aperture: blende(raw.FNumber),
+    shutter: belichtungszeit(raw.ExposureTime),
+    iso: zahl(raw.ISO),
+    focalLength: brennweite(raw.FocalLength),
+  };
+  return Object.fromEntries(Object.entries(felder).filter(([, wert]) => wert !== null));
+}
+
+export function pluckGps(raw) {
+  if (!raw) return null;
+  const lat = zahl(raw.latitude);
+  const lon = zahl(raw.longitude);
+  if (lat === null || lon === null) return null;
+  return { lat, lon };
+}
+
+export async function readExif(filePath) {
+  try {
+    return await exifr.parse(filePath, { gps: true });
+  } catch (fehler) {
+    console.warn(`EXIF nicht lesbar für ${filePath}: ${fehler.message}`);
+    return null;
+  }
 }
 
 export function altTextFromFilename(filename, position, total, albumTitle) {
