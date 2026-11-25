@@ -1,0 +1,11 @@
+---
+layout: base.njk
+pagination:
+  data: albums
+  size: 1
+  alias: album
+permalink: "/alben/{{ album.slug }}/"
+---
+<h1>{{ album.title }}</h1>
+{% if album.description %}<p class="alben-beschreibung">{{ album.description }}</p>{% endif %}
+{% include "raster.njk" %}

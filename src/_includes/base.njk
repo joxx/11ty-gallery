@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% if seitentitel %}{{ seitentitel }} — {% elif title %}{{ title }} — {% endif %}Bildergalerie</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#inhalt">Zum Inhalt</a>
+  <header class="kopf"><a href="/">Bildergalerie</a></header>
+  <main id="inhalt" tabindex="-1">
+    {{ content | safe }}
+  </main>
+</body>
+</html>
