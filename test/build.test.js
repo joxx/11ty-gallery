@@ -98,3 +98,23 @@ test("leeres Foto-Verzeichnis zeigt einen Hinweis statt eines Fehlers", async ()
   const html = await fs.readFile(path.join(leerAus, "index.html"), "utf8");
   assert.match(html, /Noch keine Alben/);
 });
+
+test("CSS bringt Fokusring, Reduced-Motion und ein Raster mit", async () => {
+  const css = await lies("assets/style.css");
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /prefers-reduced-motion/);
+  assert.doesNotMatch(css, /outline:\s*(none|0)\b/);
+  assert.match(css, /grid-template-columns:\s*repeat\(auto-fill/);
+});
+
+test("Sprungmarke steht vor dem Kopfbereich", async () => {
+  const html = await lies("index.html");
+  assert.ok(html.indexOf("skip-link") < html.indexOf("<header"));
+});
+
+test("jedes Rasterbild hat einen Alternativtext", async () => {
+  const html = await lies("alben/alpha/index.html");
+  const bilder = html.match(/<img[^>]*>/g) || [];
+  assert.equal(bilder.length, 3);
+  for (const img of bilder) assert.match(img, /alt="[^"]+"/);
+});
