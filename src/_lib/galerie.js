@@ -135,6 +135,10 @@ export function resetAlbumsCache() {
   memo.clear();
 }
 
+function alsObjekt(wert) {
+  return wert && typeof wert === "object" && !Array.isArray(wert) ? wert : {};
+}
+
 async function liesJson(datei, standard) {
   try {
     return JSON.parse(await readFile(datei, "utf8"));
@@ -162,8 +166,8 @@ async function ladeAlbum(ordner, slug, imgOutputDir) {
 
   if (dateien.length === 0) return null;
 
-  const info = await liesJson(path.join(ordner, "info.json"), {});
-  const captions = await liesJson(path.join(ordner, "captions.json"), {});
+  const info = alsObjekt(await liesJson(path.join(ordner, "info.json"), {}));
+  const captions = alsObjekt(await liesJson(path.join(ordner, "captions.json"), {}));
   const title = typeof info.title === "string" && info.title.trim() ? info.title.trim() : albumTitleFromSlug(slug);
   const description = typeof info.description === "string" ? info.description.trim() : "";
 
@@ -171,7 +175,7 @@ async function ladeAlbum(ordner, slug, imgOutputDir) {
   for (const filename of dateien) {
     const datei = path.join(ordner, filename);
     const position = fotos.length + 1;
-    const eintrag = captions[filename] ?? {};
+    const eintrag = alsObjekt(captions[filename]);
     try {
       const roh = await readExif(datei);
       const image = await buildImageMetadata(datei, imgOutputDir);

@@ -12,7 +12,7 @@ title: Alben
     <a href="{{ album.href }}">
       {{ buildPicture(album.cover.image, { sizes: "(min-width: 40rem) 20rem, 90vw", alt: album.cover.alt, loading: "lazy" }) | safe }}
       <span class="alben-titel">{{ album.title }}</span>
-      <span class="alben-anzahl">{{ album.count }} Fotos</span>
+      <span class="alben-anzahl">{{ album.count }} {{ "Foto" if album.count == 1 else "Fotos" }}</span>
     </a>
     {% if album.description %}<p class="alben-beschreibung">{{ album.description }}</p>{% endif %}
   </li>

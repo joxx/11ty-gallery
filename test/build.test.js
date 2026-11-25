@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { buildSite } from "./helpers/build.js";
+import { makePhoto } from "./helpers/fixtures.js";
 
 let aus;
 before(async () => {
@@ -117,4 +118,30 @@ test("jedes Rasterbild hat einen Alternativtext", async () => {
   const bilder = html.match(/<img[^>]*>/g) || [];
   assert.equal(bilder.length, 3);
   for (const img of bilder) assert.match(img, /alt="[^"]+"/);
+});
+
+test("Einzahl und Mehrzahl stehen richtig", async () => {
+  const html = await lies("index.html");
+  assert.match(html, /<span class="alben-anzahl">3 Fotos<\/span>/);
+  assert.match(html, /<span class="alben-anzahl">1 Foto<\/span>/);
+  assert.doesNotMatch(html, /1 Fotos/);
+});
+
+test("Dateinamen mit Leerzeichen und Umlauten erzeugen erreichbare Seiten", async () => {
+  const fotos = await fs.mkdtemp(path.join(os.tmpdir(), "galerie-namen-"));
+  const album = path.join(fotos, "sonder");
+  await fs.mkdir(album, { recursive: true });
+  await makePhoto(album, "IMG 1234.JPG", { width: 900, height: 600 });
+  await makePhoto(album, "grüße.jpg", { width: 900, height: 600 });
+
+  const ziel = await fs.mkdtemp(path.join(os.tmpdir(), "galerie-namen-aus-"));
+  await buildSite({ photosDir: fotos, outDir: ziel });
+
+  const html = await fs.readFile(path.join(ziel, "alben", "sonder", "index.html"), "utf8");
+  assert.match(html, /href="\/alben\/sonder\/grüße\/"/);
+  assert.match(html, /href="\/alben\/sonder\/IMG 1234\/"/);
+  assert.match(html, /alt="Grüße"/);
+  for (const seite of ["grüße", "IMG 1234"]) {
+    await fs.access(path.join(ziel, "alben", "sonder", seite, "index.html"));
+  }
 });

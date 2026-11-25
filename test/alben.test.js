@@ -141,3 +141,17 @@ test("Vorlagen dürfen gps nicht referenzieren", async () => {
   await fs.writeFile(path.join(vorlagen, "verraeter.njk"), "<dd>{{ foto.gps.lat }}</dd>");
   assert.throws(() => assertTemplatesDoNotUseGps(vorlagen), /gps/);
 });
+
+test("unerwarteter JSON-Inhalt in info.json und captions.json bricht nicht ab", async (t) => {
+  const ordner = await bauen("alpha", ["001.jpg"]);
+  await fs.writeFile(path.join(ordner, "info.json"), "null");
+  await fs.writeFile(path.join(ordner, "captions.json"), "null");
+  t.mock.method(console, "warn", () => {});
+
+  const [album] = await loadAlbums(opts());
+
+  assert.equal(album.title, "Alpha");
+  assert.equal(album.description, "");
+  assert.equal(album.photos[0].alt, "Foto 1 von 1 im Album Alpha");
+  assert.equal(album.photos[0].caption, "");
+});
