@@ -59,3 +59,8 @@ test("GPS wird getrennt ausgelesen", () => {
   assert.equal(pluckGps(null), null);
   assert.equal(pluckGps({ Make: "TestCam" }), null);
 });
+
+test("Alternativtext bei rein numerischen Dateinamen nennt Position und Album", () => {
+  assert.equal(altTextFromFilename("001.jpg", 1, 2, "Alpha"), "Foto 1 von 2 im Album Alpha");
+  assert.equal(altTextFromFilename("00012.JPG", 4, 9, "Beta"), "Foto 4 von 9 im Album Beta");
+});

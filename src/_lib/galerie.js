@@ -1,3 +1,6 @@
+import { readFile, readdir } from "node:fs/promises";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import exifr from "exifr";
 import queueImage, { generateHTML } from "@11ty/eleventy-img";
 
@@ -6,6 +9,7 @@ export const BREITEN = [400, 800, 1200, 1600];
 export const FORMATE = ["avif", "webp", "jpeg"];
 
 const KAMERA_NAMENSMUSTER = /^(img|dsc|dscn|pxl|dji|gopr|mvimg|screenshot)[-_ ]?\d+$/i;
+const NUR_ZAHLEN = /^\d+$/;
 
 function ohneEndung(filename) {
   const punkt = filename.lastIndexOf(".");
@@ -96,7 +100,7 @@ export async function readExif(filePath) {
 export function altTextFromFilename(filename, position, total, albumTitle) {
   const lesbar = ohneEndung(filename).replace(/[-_]+/g, " ").trim();
   const ohneLeerzeichen = lesbar.replace(/ /g, "");
-  if (ohneLeerzeichen === "" || KAMERA_NAMENSMUSTER.test(ohneLeerzeichen)) {
+  if (ohneLeerzeichen === "" || NUR_ZAHLEN.test(ohneLeerzeichen) || KAMERA_NAMENSMUSTER.test(ohneLeerzeichen)) {
     return `Foto ${position} von ${total} im Album ${albumTitle}`;
   }
   return erstGross(lesbar);
@@ -121,4 +125,148 @@ export function buildPicture(image, opts = {}) {
   attribute.decoding = "async";
   if (opts.fetchPriority) attribute.fetchpriority = opts.fetchPriority;
   return generateHTML(image, attribute);
+}
+
+const BILDENDUNGEN = new Set([".jpg", ".jpeg", ".png", ".tif", ".tiff", ".avif", ".webp"]);
+
+const memo = new Map();
+
+export function resetAlbumsCache() {
+  memo.clear();
+}
+
+async function liesJson(datei, standard) {
+  try {
+    return JSON.parse(await readFile(datei, "utf8"));
+  } catch (fehler) {
+    if (fehler.code !== "ENOENT") {
+      console.warn(`${datei} nicht lesbar, es gilt der Standard: ${fehler.message}`);
+    }
+    return standard;
+  }
+}
+
+async function ladeAlbum(ordner, slug, imgOutputDir) {
+  let eintraege;
+  try {
+    eintraege = await readdir(ordner, { withFileTypes: true });
+  } catch (fehler) {
+    console.warn(`Album ${slug} nicht lesbar: ${fehler.message}`);
+    return null;
+  }
+
+  const dateien = eintraege
+    .filter((e) => e.isFile() && BILDENDUNGEN.has(path.extname(e.name).toLowerCase()))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  if (dateien.length === 0) return null;
+
+  const info = await liesJson(path.join(ordner, "info.json"), {});
+  const captions = await liesJson(path.join(ordner, "captions.json"), {});
+  const title = typeof info.title === "string" && info.title.trim() ? info.title.trim() : albumTitleFromSlug(slug);
+  const description = typeof info.description === "string" ? info.description.trim() : "";
+
+  const fotos = [];
+  for (const filename of dateien) {
+    const datei = path.join(ordner, filename);
+    const position = fotos.length + 1;
+    const eintrag = captions[filename] ?? {};
+    try {
+      const roh = await readExif(datei);
+      const image = await buildImageMetadata(datei, imgOutputDir);
+      fotos.push({
+        albumSlug: slug,
+        filename,
+        slug: photoSlugFromFilename(filename),
+        href: `/alben/${slug}/${photoSlugFromFilename(filename)}/`,
+        alt: typeof eintrag.alt === "string" && eintrag.alt.trim()
+          ? eintrag.alt.trim()
+          : altTextFromFilename(filename, position, dateien.length, title),
+        caption: typeof eintrag.caption === "string" ? eintrag.caption.trim() : "",
+        exif: displayExif(roh),
+        gps: pluckGps(roh),
+        image,
+      });
+    } catch (fehler) {
+      console.warn(`Bild ${datei} übersprungen: ${fehler.message}`);
+    }
+  }
+
+  if (fotos.length === 0) return null;
+
+  fotos.forEach((foto, i) => {
+    const vorher = fotos[i - 1] ?? null;
+    const nachher = fotos[i + 1] ?? null;
+    foto.prevHref = vorher ? vorher.href : null;
+    foto.nextHref = nachher ? nachher.href : null;
+    foto.prevLabel = vorher ? `Vorheriges Foto: ${vorher.alt}` : null;
+    foto.nextLabel = nachher ? `Nächstes Foto: ${nachher.alt}` : null;
+  });
+
+  return {
+    slug,
+    title,
+    description,
+    href: `/alben/${slug}/`,
+    count: fotos.length,
+    cover: fotos[0],
+    photos: fotos,
+  };
+}
+
+export async function loadAlbums(options = {}) {
+  const photosDir = path.resolve(options.photosDir ?? process.env.GALERIE_PHOTOS_DIR ?? "src/photos");
+  const imgOutputDir = options.imgOutputDir ?? process.env.GALERIE_IMG_OUTPUT_DIR ?? "_site/img";
+  const schluessel = `${photosDir}|${imgOutputDir}`;
+  if (!memo.has(schluessel)) {
+    memo.set(schluessel, ladeAlben(photosDir, imgOutputDir));
+  }
+  return memo.get(schluessel);
+}
+
+async function ladeAlben(photosDir, imgOutputDir) {
+  let eintraege;
+  try {
+    eintraege = await readdir(photosDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const slugs = eintraege
+    .filter((e) => e.isDirectory() && !e.name.startsWith("_"))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const alben = [];
+  for (const slug of slugs) {
+    const album = await ladeAlbum(path.join(photosDir, slug), slug, imgOutputDir);
+    if (album) alben.push(album);
+  }
+  return alben;
+}
+
+export async function loadFotos(options = {}) {
+  const alben = await loadAlbums(options);
+  return alben.flatMap((album) => album.photos);
+}
+
+export function assertTemplatesDoNotUseGps(templatesDir) {
+  const treffer = [];
+  for (const datei of njkDateien(templatesDir)) {
+    if (/\bgps\b/.test(readFileSync(datei, "utf8"))) treffer.push(datei);
+  }
+  if (treffer.length > 0) {
+    throw new Error(`Vorlagen dürfen gps nicht referenzieren (GPS wird nie ausgeliefert): ${treffer.join(", ")}`);
+  }
+}
+
+function njkDateien(dir) {
+  const gefunden = [];
+  for (const eintrag of readdirSync(dir, { withFileTypes: true })) {
+    const pfad = path.join(dir, eintrag.name);
+    if (eintrag.isDirectory()) gefunden.push(...njkDateien(pfad));
+    else if (eintrag.name.endsWith(".njk")) gefunden.push(pfad);
+  }
+  return gefunden;
 }
