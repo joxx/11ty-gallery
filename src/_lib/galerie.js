@@ -1,6 +1,9 @@
 import exifr from "exifr";
+import queueImage, { generateHTML } from "@11ty/eleventy-img";
 
 export const IMG_URL_PATH = "/img/";
+export const BREITEN = [400, 800, 1200, 1600];
+export const FORMATE = ["avif", "webp", "jpeg"];
 
 const KAMERA_NAMENSMUSTER = /^(img|dsc|dscn|pxl|dji|gopr|mvimg|screenshot)[-_ ]?\d+$/i;
 
@@ -97,4 +100,25 @@ export function altTextFromFilename(filename, position, total, albumTitle) {
     return `Foto ${position} von ${total} im Album ${albumTitle}`;
   }
   return erstGross(lesbar);
+}
+
+export async function buildImageMetadata(filePath, outputDir) {
+  return queueImage(filePath, {
+    widths: BREITEN,
+    formats: FORMATE,
+    outputDir,
+    urlPath: IMG_URL_PATH,
+    cacheOptions: { duration: "30d" },
+  });
+}
+
+export function buildPicture(image, opts = {}) {
+  const attribute = {};
+  if (opts.alt !== undefined) attribute.alt = opts.alt;
+  if (opts.sizes) attribute.sizes = opts.sizes;
+  if (opts.className) attribute.class = opts.className;
+  attribute.loading = opts.loading ?? "lazy";
+  attribute.decoding = "async";
+  if (opts.fetchPriority) attribute.fetchpriority = opts.fetchPriority;
+  return generateHTML(image, attribute);
 }
