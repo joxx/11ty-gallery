@@ -158,7 +158,7 @@ Actions, oder per `gh`):
 gh secret set DEPLOY_PROTOCOL --body "sftp"
 gh secret set DEPLOY_HOST     --body "ftp.example.org"
 gh secret set DEPLOY_USER     --body "benutzer"
-gh secret set DEPLOY_PASSWORD --body "geheim"
+gh secret set DEPLOY_PASSWORD --body "dein-passwort"
 gh secret set DEPLOY_PATH     --body "/htdocs/galerie"
 ```
 
