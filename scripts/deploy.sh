@@ -69,10 +69,6 @@ case "$QUELLE" in
   /*) ;;
   *) QUELLE="$REPO_ROOT/$QUELLE" ;;
 esac
-if [ ! -d "$QUELLE" ]; then
-  echo "deploy.sh: Quelle $QUELLE fehlt. Erst bauen: npm run build" >&2
-  exit 1
-fi
 
 if [ -n "${DEPLOY_PORT:-}" ]; then
   PORT=$DEPLOY_PORT
@@ -123,6 +119,11 @@ if [ "$NUR_CONFIG" = "1" ]; then
   fi
   echo "Kommando: $PROGRAMM -u $DEPLOY_USER $URL -e \"$BEFEHLE\""
   exit 0
+fi
+
+if [ ! -d "$QUELLE" ]; then
+  echo "deploy.sh: Quelle $QUELLE fehlt. Erst bauen: npm run build" >&2
+  exit 1
 fi
 
 if ! command -v "$PROGRAMM" >/dev/null 2>&1; then

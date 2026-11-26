@@ -53,6 +53,7 @@ function nurPflicht() {
     DEPLOY_USER: "u",
     DEPLOY_PASSWORD: "geheim",
     DEPLOY_PATH: "/htdocs/galerie",
+    DEPLOY_SOURCE: "test/fixtures/site",
   };
 }
 
@@ -237,4 +238,18 @@ test("DEPLOY_PATH ohne führenden Schrägstrich wird ergänzt", async () => {
   });
   assert.match(stdout, /DEPLOY_PATH="\/htdocs\/galerie"/);
   assert.match(stdout, /sftp:\/\/beispiel\.test:22\/htdocs\/galerie/);
+});
+
+test("--print-config kommt ohne gebauten Ordner aus", async () => {
+  const { stdout } = await run(skript, ["--print-config"], {
+    env: { ...nurPflicht(), DEPLOY_ENV_FILE: "/dev/null", DEPLOY_SOURCE: "/nicht/vorhanden" },
+  });
+  assert.match(stdout, /DEPLOY_SOURCE="\/nicht\/vorhanden"/);
+
+  const fehler = await fehlschlag([], {
+    ...nurPflicht(),
+    DEPLOY_ENV_FILE: "/dev/null",
+    DEPLOY_SOURCE: "/nicht/vorhanden",
+  });
+  assert.match(fehler.stderr, /Quelle \/nicht\/vorhanden fehlt/);
 });
