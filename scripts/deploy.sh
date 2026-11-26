@@ -109,6 +109,7 @@ if [ "$NUR_CONFIG" = "1" ]; then
     echo "DEPLOY_SSH_KEY=\"\""
   fi
   echo "DEPLOY_ENV_FILE=\"$ENV_DATEI\""
+  echo "DEPLOY_TIMEOUT=\"${DEPLOY_TIMEOUT:-600}\""
   if [ "$TROCKENLAUF" = "1" ]; then
     echo "Trockenlauf: ja"
   else
@@ -123,12 +124,44 @@ if ! command -v "$PROGRAMM" >/dev/null 2>&1; then
   exit 1
 fi
 
+ZEITGRENZE=${DEPLOY_TIMEOUT:-600}
+case "$ZEITGRENZE" in
+  ''|*[!0-9]*)
+    echo "deploy.sh: DEPLOY_TIMEOUT muss eine Sekundenzahl sein, war: $ZEITGRENZE" >&2
+    exit 1
+    ;;
+esac
 HINWEIS=""
 [ "$TROCKENLAUF" = "1" ] && HINWEIS=" (Trockenlauf)"
 echo "deploy.sh: lädt $QUELLE nach $URL$HINWEIS"
 
 if [ -n "${DEPLOY_PASSWORD:-}" ]; then
-  LFTP_PASSWORD="$DEPLOY_PASSWORD" "$PROGRAMM" --env-password -u "$DEPLOY_USER" "$URL" -e "$BEFEHLE"
+  LFTP_PASSWORD="$DEPLOY_PASSWORD" "$PROGRAMM" --env-password -u "$DEPLOY_USER" "$URL" -e "$BEFEHLE" &
 else
-  "$PROGRAMM" -u "$DEPLOY_USER" "$URL" -e "$BEFEHLE"
+  "$PROGRAMM" -u "$DEPLOY_USER" "$URL" -e "$BEFEHLE" &
 fi
+LFTP_PID=$!
+
+# lftp wiederholt einen fehlgeschlagenen Verbindungsaufbau endlos und hängt
+# dann in Job::WaitDone; ohne Zeitgrenze bliebe der Aufruf für immer stehen.
+GEDULDET=0
+ZEITUEBERSCHREITUNG=0
+while kill -0 "$LFTP_PID" 2>/dev/null; do
+  sleep 0.5
+  GEDULDET=$((GEDULDET + 1))
+  if [ "$GEDULDET" -ge $((ZEITGRENZE * 2)) ]; then
+    ZEITUEBERSCHREITUNG=1
+    kill -TERM "$LFTP_PID" 2>/dev/null
+    sleep 2
+    kill -KILL "$LFTP_PID" 2>/dev/null
+    break
+  fi
+done
+wait "$LFTP_PID" 2>/dev/null
+STATUS=$?
+
+if [ "$ZEITUEBERSCHREITUNG" = "1" ]; then
+  echo "deploy.sh: Zeitüberschreitung nach ${ZEITGRENZE}s — Server, Port und Zugangsdaten prüfen (DEPLOY_TIMEOUT erhöht die Grenze)" >&2
+  exit 1
+fi
+exit "$STATUS"

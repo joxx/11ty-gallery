@@ -23,7 +23,7 @@ async function istIgnoriert(pfad) {
   );
 }
 
-test("deploy.env.example nennt alle zehn Einstellungen", async () => {
+test("deploy.env.example nennt alle elf Einstellungen", async () => {
   assert.deepEqual(await schluesselAusVorlage(), [
     "DEPLOY_PROTOCOL",
     "DEPLOY_HOST",
@@ -35,6 +35,7 @@ test("deploy.env.example nennt alle zehn Einstellungen", async () => {
     "DEPLOY_DELETE",
     "DEPLOY_SSH_KEY",
     "DEPLOY_ENV_FILE",
+    "DEPLOY_TIMEOUT",
   ]);
 });
 
@@ -133,4 +134,35 @@ test("--dry-run löscht nichts und nennt den Trockenlauf", async () => {
   assert.match(mit, /Trockenlauf/);
   assert.match(mit, /--dry-run/);
   assert.match(mit, /--delete/);
+});
+
+async function fakeLftp(rumpf) {
+  const ordner = await fs.mkdtemp(`${os.tmpdir()}/lftp-`);
+  const datei = `${ordner}/lftp`;
+  await fs.writeFile(datei, `#!/bin/bash\n${rumpf}\n`);
+  await fs.chmod(datei, 0o755);
+  return datei;
+}
+
+test("bricht ab, wenn lftp nicht antwortet", async () => {
+  const lftp = await fakeLftp("exec sleep 30");
+  const startn = Date.now();
+  const fehler = await fehlschlag([], {
+    ...nurPflicht(),
+    DEPLOY_ENV_FILE: "/dev/null",
+    LFTP_BIN: lftp,
+    DEPLOY_TIMEOUT: "1",
+  });
+  assert.match(fehler.stderr, /Zeitüberschreitung/);
+  assert.ok(Date.now() - startn < 15000, "Wächter hat nicht abgebrochen");
+});
+
+test("gibt den Exit-Code von lftp weiter", async () => {
+  const lftp = await fakeLftp("exit 4");
+  const fehler = await fehlschlag([], {
+    ...nurPflicht(),
+    DEPLOY_ENV_FILE: "/dev/null",
+    LFTP_BIN: lftp,
+  });
+  assert.equal(fehler.code, 4);
 });
