@@ -9,7 +9,9 @@
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
     "build": "rm -rf _site && eleventy",
-    "serve": "eleventy --serve"
+    "serve": "eleventy --serve",
+    "deploy": "scripts/deploy.sh",
+    "deploy:dry": "scripts/deploy.sh --dry-run"
   },
   "keywords": [],
   "author": "",

@@ -8,3 +8,6 @@ _site/
 
 # lokales Spielmaterial, keine Alben für das Repo
 src/photos/preview/
+
+# echte Zugangsdaten
+deploy.env
