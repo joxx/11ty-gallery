@@ -184,3 +184,18 @@ test("Workflow nutzt keine Actions von Dritten", async () => {
     assert.match(aktion, /^actions\/(checkout|setup-node|cache)@v4$/);
   }
 });
+
+test("netlify.toml baut mit npm run build und veröffentlicht _site", async () => {
+  const text = await fs.readFile(`${wurzel}netlify.toml`, "utf8");
+  assert.match(text, /command\s*=\s*"npm run build"/);
+  assert.match(text, /publish\s*=\s*"_site"/);
+});
+
+test("LICENSE ist ISC wie in package.json", async () => {
+  const pkg = JSON.parse(await fs.readFile(`${wurzel}package.json`, "utf8"));
+  const text = await fs.readFile(`${wurzel}LICENSE`, "utf8");
+  assert.equal(pkg.license, "ISC");
+  assert.match(text, /ISC License/);
+  assert.match(text, /Copyright \(c\) 2026 Joachim Kliemann/);
+  assert.match(text, /THE SOFTWARE IS PROVIDED "AS IS"/);
+});

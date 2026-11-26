@@ -1,0 +1,8 @@
+# Netlify baut bei jedem Push selbst; die Verbindung zum Repo entsteht in der
+# Netlify-Oberfläche, nicht hier. `noindex` bleibt unverändert.
+[build]
+  command = "npm run build"
+  publish = "_site"
+
+[build.environment]
+  NODE_VERSION = "22"
