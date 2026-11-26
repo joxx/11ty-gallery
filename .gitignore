@@ -2,3 +2,9 @@ node_modules/
 _site/
 .cache/
 .superpowers/
+
+# macOS
+.DS_Store
+
+# lokales Spielmaterial, keine Alben für das Repo
+src/photos/preview/
