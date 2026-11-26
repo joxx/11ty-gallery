@@ -199,3 +199,20 @@ test("LICENSE ist ISC wie in package.json", async () => {
   assert.match(text, /Copyright \(c\) 2026 Joachim Kliemann/);
   assert.match(text, /THE SOFTWARE IS PROVIDED "AS IS"/);
 });
+
+test("README erklärt alle drei Wege, beide Repo-Varianten und noindex", async () => {
+  const text = await fs.readFile(`${wurzel}README.md`, "utf8");
+  for (const muss of [
+    "deploy.env.example",
+    "scripts/deploy.sh",
+    "npm run deploy",
+    ".github/workflows/deploy.yml",
+    "netlify.toml",
+    "Öffentlich oder privat",
+    "privates Repo",
+    "noindex",
+    "LICENSE",
+  ]) {
+    assert.ok(text.includes(muss), `README nennt ${muss} nicht`);
+  }
+});
