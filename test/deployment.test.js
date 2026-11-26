@@ -216,3 +216,25 @@ test("README erklärt alle drei Wege, beide Repo-Varianten und noindex", async (
     assert.ok(text.includes(muss), `README nennt ${muss} nicht`);
   }
 });
+
+test("deploy.env ohne Zeilenumbruch am Ende wird vollständig gelesen", async () => {
+  const ordner = await fs.mkdtemp(`${os.tmpdir()}/deploy-`);
+  const datei = `${ordner}/env`;
+  await fs.writeFile(
+    datei,
+    "DEPLOY_HOST=ohne-newline\nDEPLOY_USER=u\nDEPLOY_PASSWORD=p\nDEPLOY_PATH=/x",
+  );
+  const { stdout } = await run(skript, ["--print-config"], {
+    env: { PATH: process.env.PATH, DEPLOY_ENV_FILE: datei },
+  });
+  assert.match(stdout, /DEPLOY_HOST="ohne-newline"/);
+  assert.match(stdout, /DEPLOY_PATH="\/x"/);
+});
+
+test("DEPLOY_PATH ohne führenden Schrägstrich wird ergänzt", async () => {
+  const { stdout } = await run(skript, ["--print-config"], {
+    env: { ...nurPflicht(), DEPLOY_ENV_FILE: "/dev/null", DEPLOY_PATH: "htdocs/galerie" },
+  });
+  assert.match(stdout, /DEPLOY_PATH="\/htdocs\/galerie"/);
+  assert.match(stdout, /sftp:\/\/beispiel\.test:22\/htdocs\/galerie/);
+});

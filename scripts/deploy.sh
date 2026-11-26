@@ -35,7 +35,7 @@ done
 
 ENV_DATEI=${DEPLOY_ENV_FILE:-$REPO_ROOT/deploy.env}
 if [ -f "$ENV_DATEI" ]; then
-  while IFS='=' read -r schluessel wert; do
+  while IFS='=' read -r schluessel wert || [ -n "$schluessel" ]; do
     case "$schluessel" in ''|\#*) continue ;; esac
     if ! printenv "$schluessel" >/dev/null 2>&1; then
       export "$schluessel=$wert"
@@ -81,6 +81,12 @@ elif [ "$PROTOKOLL" = "sftp" ]; then
 else
   PORT=21
 fi
+
+# Ein Zielpfad ohne führenden Schrägstrich würde die URL verkleben.
+case "$DEPLOY_PATH" in
+  /*|'') ;;
+  *) DEPLOY_PATH="/$DEPLOY_PATH" ;;
+esac
 
 URL="$PROTOKOLL://$DEPLOY_HOST:$PORT$DEPLOY_PATH"
 
