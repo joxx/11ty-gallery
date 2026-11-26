@@ -166,3 +166,21 @@ test("gibt den Exit-Code von lftp weiter", async () => {
   });
   assert.equal(fehler.code, 4);
 });
+
+test("Workflow testet vor dem Veröffentlichen und cached die Bilder", async () => {
+  const text = await fs.readFile(`${wurzel}.github/workflows/deploy.yml`, "utf8");
+  assert.ok(text.indexOf("npm test") < text.indexOf("scripts/deploy.sh"));
+  assert.ok(text.indexOf("actions/cache") < text.indexOf("npm run build"));
+  for (const name of ["DEPLOY_HOST", "DEPLOY_USER", "DEPLOY_PASSWORD", "DEPLOY_PATH"]) {
+    assert.match(text, new RegExp(`secrets\\.${name}`));
+  }
+});
+
+test("Workflow nutzt keine Actions von Dritten", async () => {
+  const text = await fs.readFile(`${wurzel}.github/workflows/deploy.yml`, "utf8");
+  const genutzt = [...text.matchAll(/uses:\s*(\S+)/g)].map((treffer) => treffer[1]);
+  assert.ok(genutzt.length > 0);
+  for (const aktion of genutzt) {
+    assert.match(aktion, /^actions\/(checkout|setup-node|cache)@v4$/);
+  }
+});

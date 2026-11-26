@@ -1,0 +1,57 @@
+name: Veröffentlichen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  veroeffentlichen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Bild-Cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/eleventy-img
+          key: eleventy-img-${{ runner.os }}-${{ hashFiles('src/photos/**') }}
+          restore-keys: eleventy-img-${{ runner.os }}-
+
+      - name: Bauen
+        run: npm run build
+
+      - name: lftp installieren
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+      - name: Hochladen
+        run: ./scripts/deploy.sh
+        env:
+          DEPLOY_PROTOCOL: ${{ secrets.DEPLOY_PROTOCOL }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_DELETE: ${{ secrets.DEPLOY_DELETE }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_TIMEOUT: ${{ secrets.DEPLOY_TIMEOUT }}
